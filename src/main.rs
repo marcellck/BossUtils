@@ -55,6 +55,8 @@ fn main() {
     for (base_id, mut factors) in map {
         factors.totems = total_totems;
         factors.paragon_cost = paragon_costs.get(&format!("{} Paragon", base_id)).unwrap().clone() as f32;
-        println!("{base_id}: {}", factors.get_degree())
+        for (degree, cost) in factors.get_degree_requirements() {
+            println!("{base_id} (D{degree}): {cost}");
+        }
     }
 }

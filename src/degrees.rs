@@ -10,15 +10,20 @@ pub struct DegreeFactors {
 }
 
 impl DegreeFactors {
-    pub fn get_degree(self) -> i32 {
-        let power = self.get_total_power();
-        for i in 2_i64..=100 {
-            let power_required = (50*i.pow(3)+5025*i.pow(2)+168324*i+843000)/600;
-            if power_required >= power as i64 {
-                return (i - 1) as i32;
+    pub fn get_degree_requirements(self) -> Vec<(i32, f32)> {
+        let current_power = self.get_total_power();
+        let current_degree = degree_from_power(current_power);
+        let mut result = vec![(current_degree, 0.0)];
+        let max_power_from_slider = 60000.0 - self.get_power_from_worth();
+        for degree in (current_degree+1)..100 {
+            let power_required = power_required(degree) - current_power;
+            if power_required > max_power_from_slider {
+                break;
             }
+            let cash_spent_per_power = self.paragon_cost * 1.05 / 20000.0;
+            result.push((degree, power_required*cash_spent_per_power))
         }
-        100
+        result
     }
     fn get_total_power(&self) -> f32 {
         let total_power = self.get_power_from_worth()
@@ -29,26 +34,36 @@ impl DegreeFactors {
         total_power
     }
     fn get_power_from_worth(&self) -> f32 {
-        dbg!(self.worth);
-        dbg!(self.paragon_cost);
-
-        let cost_power = ((self.worth) / (self.paragon_cost / 20000f32)).min(60000f32);
-        dbg!(cost_power)
+        let cost_power = ((self.worth) / (self.paragon_cost / 20000.0)).min(60000.0);
+        cost_power
     }
     fn get_power_from_tier5s(&self) -> f32 {
-        let t5_power = ((self.tier_5s - 3) as f32 * 6000f32).min(50000f32).max(0f32);
-        dbg!(t5_power)
+        let t5_power = ((self.tier_5s - 3) as f32 * 6000.0).min(50000.0).max(0.0);
+        t5_power
     }
     fn get_power_from_upgrades(&self) -> f32 {
-        let total_upgrade_power = (self.total_upgrades as f32 * 100f32).min(10000f32);
-        dbg!(total_upgrade_power)
+        let total_upgrade_power = (self.total_upgrades as f32 * 100.0).min(10000.0);
+        total_upgrade_power
     }
     fn get_power_from_pops_and_cash_generated(&self) -> f32 {
-        let pop_and_income_power = (self.damage_dealt as f32 / 180f32 + self.cash_earned / 45f32).min(90000f32);
-        dbg!(pop_and_income_power)
+        let pop_and_income_power = (self.damage_dealt as f32 / 180.0 + self.cash_earned / 45.0).min(90000.0);
+        pop_and_income_power
     }
     fn get_power_from_totems(&self) -> f32 {
         let totem_power = self.totems * 2000;
-        dbg!(totem_power) as f32
+        totem_power as f32
     }
+}
+
+fn power_required(degree: i32) -> f32 {
+    (50 * degree.pow(3) + 5025 * degree.pow(2) + 168324 * degree + 843000) as f32 / 600.0
+}
+
+fn degree_from_power(power: f32) -> i32 {
+    for degree in 2..=100 {
+        if power_required(degree) >= power {
+            return degree - 1;
+        }
+    }
+    100
 }
