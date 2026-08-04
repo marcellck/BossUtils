@@ -15,7 +15,7 @@ impl DegreeFactors {
         let current_degree = degree_from_power(current_power);
         let mut result = vec![(current_degree, 0.0)];
         let max_power_from_slider = 60000.0 - self.get_power_from_worth();
-        for degree in (current_degree+1)..100 {
+        for degree in (current_degree+1)..=100 {
             let power_required = power_required(degree) - current_power;
             if power_required > max_power_from_slider {
                 break;

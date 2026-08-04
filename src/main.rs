@@ -6,14 +6,14 @@ use crate::degrees::DegreeFactors;
 use crate::memory::{get_module_base, get_process_pid_and_handle};
 
 fn main() {
-    let (pid, handle) = get_process_pid_and_handle().unwrap();
-    let game_assembly = get_module_base(pid).unwrap();
-    let ingame = game_assembly.get_ingame_instance(handle).unwrap();
-    let bridge = ingame.get_unity_to_simulation(handle).unwrap();
-    let simulation = bridge.get_simulation(handle).unwrap();
-    let gamemodel = simulation.get_gamemodel(handle).unwrap();
+    let (pid, handle) = get_process_pid_and_handle().expect("BloonsTD6 not running");
+    let game_assembly = get_module_base(pid).expect("GameAssembly module not found in process maps");
+    let ingame = game_assembly.get_ingame_instance(handle).expect("failed to read InGame instance");
+    let bridge = ingame.get_unity_to_simulation(handle).expect("failed to read UnityToSimulation");
+    let simulation = bridge.get_simulation(handle).expect("failed to read Simulation");
+    let gamemodel = simulation.get_gamemodel(handle).expect("failed to read GameModel");
     let paragon_costs = gamemodel.get_paragon_upgrades_costs(handle);
-    let towers = bridge.get_all_towers(handle).unwrap();
+    let towers = bridge.get_all_towers(handle).expect("failed to read towers list");
     let mut map: HashMap<String, DegreeFactors> = HashMap::new();
     let mut total_totems = 0;
     for tower in towers {
@@ -35,8 +35,8 @@ fn main() {
         let total_upgrades = tower_model.get_total_upgrades(handle).unwrap();
         let damage_dealt = tower.get_damage_dealt(handle).unwrap();
         let cash_earned = tower.get_cash_earned(handle).unwrap();
-        let is_tier_5 = tower_model.get_tier(handle).unwrap() == 5;
-        let is_paragon = tower_model.get_tier(handle).unwrap() == 6;
+        let is_tier_5 = tower_model.get_max_path_tier(handle).unwrap() == 5;
+        let is_paragon = tower_model.get_is_paragon(handle).unwrap();
         let entry = map.entry(base_id.clone()).or_default();
 
         // Skip paragons. Useful if player wants to sell and rebuy paragon for higher degree
