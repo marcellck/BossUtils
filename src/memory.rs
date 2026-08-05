@@ -42,8 +42,7 @@ pub fn get_process_pid_and_handle() -> Option<(Pid, ProcessHandle)> {
     Some((pid, handle))
 }
 
-// A dylib/DLL is mapped as many separate memory regions on macOS
-// filter to executable regions only and take the minimum address
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 pub fn get_module_base(pid: Pid) -> Option<GameAssembly> {
     let maps = get_process_maps(pid).ok()?;
     maps.into_iter()
@@ -51,6 +50,24 @@ pub fn get_module_base(pid: Pid) -> Option<GameAssembly> {
             map.filename()
                 .map(|path| path.to_string_lossy().contains(MODULE_NAME))
                 .unwrap_or(false)
+        })
+        .map(|map| map.start())
+        .min()
+        .map(GameAssembly)
+}
+
+// A dylib/DLL is mapped as many separate memory regions on macOS
+// filter to executable regions only and take the minimum address
+#[cfg(target_os = "macos")]
+pub fn get_module_base(pid: Pid) -> Option<GameAssembly> {
+    let maps = get_process_maps(pid).ok()?;
+    maps.into_iter()
+        .filter(|map| {
+            map.is_exec()
+                && map
+                    .filename()
+                    .map(|path| path.to_string_lossy().contains(MODULE_NAME))
+                    .unwrap_or(false)
         })
         .map(|map| map.start())
         .min()
