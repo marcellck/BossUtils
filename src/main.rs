@@ -1,19 +1,30 @@
-mod memory;
 mod degrees;
+mod memory;
 
-use std::collections::HashMap;
 use crate::degrees::DegreeFactors;
 use crate::memory::{get_module_base, get_process_pid_and_handle};
+use std::collections::HashMap;
 
 fn main() {
     let (pid, handle) = get_process_pid_and_handle().expect("BloonsTD6 not running");
-    let game_assembly = get_module_base(pid).expect("GameAssembly module not found in process maps");
-    let ingame = game_assembly.get_ingame_instance(handle).expect("failed to read InGame instance");
-    let bridge = ingame.get_unity_to_simulation(handle).expect("failed to read UnityToSimulation");
-    let simulation = bridge.get_simulation(handle).expect("failed to read Simulation");
-    let gamemodel = simulation.get_gamemodel(handle).expect("failed to read GameModel");
+    let game_assembly =
+        get_module_base(pid).expect("GameAssembly module not found in process maps");
+    let ingame = game_assembly
+        .get_ingame_instance(handle)
+        .expect("failed to read InGame instance");
+    let bridge = ingame
+        .get_unity_to_simulation(handle)
+        .expect("failed to read UnityToSimulation");
+    let simulation = bridge
+        .get_simulation(handle)
+        .expect("failed to read Simulation");
+    let gamemodel = simulation
+        .get_gamemodel(handle)
+        .expect("failed to read GameModel");
     let paragon_costs = gamemodel.get_paragon_upgrades_costs(handle);
-    let towers = bridge.get_all_towers(handle).expect("failed to read towers list");
+    let towers = bridge
+        .get_all_towers(handle)
+        .expect("failed to read towers list");
     let mut map: HashMap<String, DegreeFactors> = HashMap::new();
     let mut total_totems = 0;
     for tower in towers {
@@ -54,7 +65,10 @@ fn main() {
     }
     for (base_id, mut factors) in map {
         factors.totems = total_totems;
-        factors.paragon_cost = paragon_costs.get(&format!("{} Paragon", base_id)).unwrap().clone() as f32;
+        factors.paragon_cost = paragon_costs
+            .get(&format!("{} Paragon", base_id))
+            .unwrap()
+            .clone() as f32;
         for (degree, cost) in factors.get_degree_requirements() {
             println!("{base_id} (D{degree}): {cost}");
         }

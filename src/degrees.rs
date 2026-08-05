@@ -6,7 +6,7 @@ pub struct DegreeFactors {
     pub total_upgrades: i32,
     pub tier_5s: i32,
     pub paragon_cost: f32,
-    pub totems: i32
+    pub totems: i32,
 }
 
 impl DegreeFactors {
@@ -15,13 +15,13 @@ impl DegreeFactors {
         let current_degree = degree_from_power(current_power);
         let mut result = vec![(current_degree, 0.0)];
         let max_power_from_slider = 60000.0 - self.get_power_from_worth();
-        for degree in (current_degree+1)..=100 {
+        for degree in (current_degree + 1)..=100 {
             let power_required = power_required(degree) - current_power;
             if power_required > max_power_from_slider {
                 break;
             }
             let cash_spent_per_power = self.paragon_cost * 1.05 / 20000.0;
-            result.push((degree, power_required*cash_spent_per_power))
+            result.push((degree, power_required * cash_spent_per_power))
         }
         result
     }
@@ -46,7 +46,8 @@ impl DegreeFactors {
         total_upgrade_power
     }
     fn get_power_from_pops_and_cash_generated(&self) -> f32 {
-        let pop_and_income_power = (self.damage_dealt as f32 / 180.0 + self.cash_earned / 45.0).min(90000.0);
+        let pop_and_income_power =
+            (self.damage_dealt as f32 / 180.0 + self.cash_earned / 45.0).min(90000.0);
         pop_and_income_power
     }
     fn get_power_from_totems(&self) -> f32 {

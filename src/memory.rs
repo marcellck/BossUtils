@@ -1,34 +1,38 @@
-use std::collections::HashMap;
-use proc_maps::{get_process_maps, Pid};
+use proc_maps::{Pid, get_process_maps};
 use process_memory::{DataMember, Memory, ProcessHandle, TryIntoProcessHandle};
+use std::collections::HashMap;
 use sysinfo::System;
 
 pub struct GameAssembly(pub usize);
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct InGame(usize);
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Simulation(usize);
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct GameModel(usize);
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct UnityToSimulation(usize);
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct TowerToSimulation(usize);
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Tower(usize);
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct TowerModel(usize);
 
 // Process name differs by platform
 // Module file name differs by platform
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 const PROCESS_NAME: &str = "BloonsTD6.exe";
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 const MODULE_NAME: &str = "GameAssembly.dll";
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+const INGAME_OFFSET: usize = 0x4A5BF20;
 #[cfg(target_os = "macos")]
 const PROCESS_NAME: &str = "BloonsTD6";
 #[cfg(target_os = "macos")]
 const MODULE_NAME: &str = "GameAssembly.dylib";
+#[cfg(target_os = "macos")]
+const INGAME_OFFSET: usize = 0x6090CE0;
 
 pub fn get_process_pid_and_handle() -> Option<(Pid, ProcessHandle)> {
     let sys = System::new_all();
@@ -38,18 +42,15 @@ pub fn get_process_pid_and_handle() -> Option<(Pid, ProcessHandle)> {
     Some((pid, handle))
 }
 
-
 // A dylib/DLL is mapped as many separate memory regions on macOS
 // filter to executable regions only and take the minimum address
 pub fn get_module_base(pid: Pid) -> Option<GameAssembly> {
     let maps = get_process_maps(pid).ok()?;
     maps.into_iter()
         .filter(|map| {
-            map.is_exec()
-                && map
-                    .filename()
-                    .map(|path| path.to_string_lossy().contains(MODULE_NAME))
-                    .unwrap_or(false)
+            map.filename()
+                .map(|path| path.to_string_lossy().contains(MODULE_NAME))
+                .unwrap_or(false)
         })
         .map(|map| map.start())
         .min()
@@ -63,20 +64,14 @@ fn read_memory<T: Copy>(handle: ProcessHandle, offsets: Vec<usize>) -> Option<T>
 }
 
 impl GameAssembly {
-    #[cfg(target_os = "windows")]
     pub fn get_ingame_instance(self, handle: ProcessHandle) -> Option<InGame> {
-        read_memory(handle, vec![self.0 + 0x4949E50, 0xB8, 0x0])
-    }
-
-    #[cfg(target_os = "macos")]
-    pub fn get_ingame_instance(self, handle: ProcessHandle) -> Option<InGame> {
-        read_memory(handle, vec![self.0 + 0x5F67120, 0xB8, 0x0])
+        read_memory(handle, vec![self.0 + INGAME_OFFSET, 0xB8, 0x0])
     }
 }
 
 impl InGame {
     pub fn get_unity_to_simulation(&self, handle: ProcessHandle) -> Option<UnityToSimulation> {
-        read_memory(handle, vec![self.0 + 0xD0])
+        read_memory(handle, vec![self.0 + 0xC0])
     }
 }
 
@@ -106,11 +101,11 @@ impl Simulation {
 
 impl GameModel {
     pub fn get_paragon_upgrades_costs(&self, handle: ProcessHandle) -> HashMap<String, i32> {
-        let upgrades: usize = read_memory(handle, vec![self.0 + 0x118]).unwrap();
+        let upgrades: usize = read_memory(handle, vec![self.0 + 0x110]).unwrap();
         let array = read_il2cpp_pointer_array(handle, upgrades);
         let mut result = HashMap::new();
         for entry in array {
-            let name: usize = read_memory(handle, vec![entry + 0x10]).unwrap();
+            let name: usize = read_memory(handle, vec![entry + 0x20]).unwrap();
             let name: String = read_il2cpp_string(handle, name).unwrap();
             if name.contains("Paragon") && !name.contains("Sentry") {
                 let cost: i32 = read_memory(handle, vec![entry + 0x30]).unwrap();
@@ -143,10 +138,9 @@ impl Tower {
 }
 
 impl TowerModel {
-
     // the single scalar tier field reads as 0 for every tower on macOS
     pub fn get_max_path_tier(&self, handle: ProcessHandle) -> Option<i32> {
-        let array: usize = read_memory(handle, vec![self.0 + 0x70])?;
+        let array: usize = read_memory(handle, vec![self.0 + 0x68])?;
         if array == 0 {
             return None;
         }
@@ -162,14 +156,14 @@ impl TowerModel {
     }
 
     pub fn get_is_paragon(&self, handle: ProcessHandle) -> Option<bool> {
-        let value: u8 = read_memory(handle, vec![self.0 + 0x134])?;
+        let value: u8 = read_memory(handle, vec![self.0 + 0x12C])?;
         Some(value != 0)
     }
     pub fn get_total_upgrades(&self, handle: ProcessHandle) -> Option<i32> {
-        read_memory(handle, vec![self.0 + 0xF0, 0x18])
+        read_memory(handle, vec![self.0 + 0xE8, 0x18])
     }
     pub fn get_base_id(&self, handle: ProcessHandle) -> Option<String> {
-        let str: usize = read_memory(handle, vec![self.0 + 0x30]).unwrap();
+        let str: usize = read_memory(handle, vec![self.0 + 0x28]).unwrap();
         read_il2cpp_string(handle, str)
     }
 }
