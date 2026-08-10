@@ -125,7 +125,7 @@ impl GameModel {
             let name: usize = read_memory(handle, vec![entry + 0x20]).unwrap();
             let name: String = read_il2cpp_string(handle, name).unwrap();
             if name.contains("Paragon") && !name.contains("Sentry") {
-                let cost: i32 = read_memory(handle, vec![entry + 0x30]).unwrap();
+                let cost: i32 = read_memory(handle, vec![entry + 0x28]).unwrap();
                 result.insert(name, cost);
             }
         }
