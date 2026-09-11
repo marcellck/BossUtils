@@ -26,13 +26,14 @@ const PROCESS_NAME: &str = "BloonsTD6.exe";
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 const MODULE_NAME: &str = "GameAssembly.dll";
 #[cfg(any(target_os = "windows", target_os = "linux"))]
+// NOT re-derived for v56.3. I can't test on windows :/
 const INGAME_OFFSET: usize = 0x4A5BF20;
 #[cfg(target_os = "macos")]
 const PROCESS_NAME: &str = "BloonsTD6";
 #[cfg(target_os = "macos")]
 const MODULE_NAME: &str = "GameAssembly.dylib";
 #[cfg(target_os = "macos")]
-const INGAME_OFFSET: usize = 0x6090CE0;
+const INGAME_OFFSET: usize = 0x60C1870;
 
 pub fn get_process_pid_and_handle() -> Option<(Pid, ProcessHandle)> {
     let sys = System::new_all();
@@ -150,7 +151,7 @@ impl Tower {
         read_memory(handle, vec![self.0 + 0x170])
     }
     pub fn get_tower_model(&self, handle: ProcessHandle) -> Option<TowerModel> {
-        read_memory(handle, vec![self.0 + 0x198])
+        read_memory(handle, vec![self.0 + 0x1A0])
     }
 }
 
